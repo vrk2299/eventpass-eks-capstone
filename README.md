@@ -87,7 +87,7 @@ In the GitHub repository, open **Settings → Secrets and variables → Actions*
 
 Create two **Actions secrets** named `ADMIN_PASSWORD` and `SECRET_KEY`. Use a unique, temporary organizer password and a long random Flask secret key. Do not put either value in Git, Terraform variables, ConfigMaps, or repository variables.
 
-The pipeline tests every pull request. On a push to `main`, it assumes the Terraform-created AWS role through OIDC, builds an image tagged with the commit SHA, pushes it to ECR, creates the runtime ConfigMap and refreshes Kubernetes secrets from RDS Secrets Manager and GitHub Actions secrets, applies the Kustomize overlay, and waits for the Deployment rollout. The AWS role is scoped to this repository's immutable GitHub IDs and the EKS deployer group is bound only in the `eventpass` namespace.
+The pipeline tests every pull request. On a push to `main`, it assumes the Terraform-created AWS role through OIDC, builds an image tagged with the commit SHA, pushes it to ECR, creates the runtime ConfigMap and refreshes Kubernetes secrets from RDS Secrets Manager and GitHub Actions secrets, applies the Kustomize overlay, and waits for the Deployment rollout. Until all AWS repository variables are configured, the deploy job is skipped; after setup, use **Actions → EventPass CI and deploy → Run workflow** to deploy the current `main` commit. The AWS role is scoped to this repository's immutable GitHub IDs and the EKS deployer group is bound only in the `eventpass` namespace.
 
 ## Stage 4: use and teach the deployment
 
