@@ -1,0 +1,6 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: eventpass
+  labels:
+    app.kubernetes.io/part-of: eventpass

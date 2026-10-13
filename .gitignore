@@ -1,0 +1,14 @@
+.env
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.terraform/
+*.tfstate*
+terraform.tfvars
+terraform.tfvars.json
+crash.log
+*.pem
+*.key
+coverage.xml
+htmlcov/

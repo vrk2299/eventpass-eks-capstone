@@ -1,0 +1,5 @@
+aws_region            = "ap-south-1"
+github_owner          = "vrk2299"
+github_repository     = "eventpass-eks-capstone"
+github_owner_id       = "REPLACE_WITH_OWNER_ID"
+github_repository_id  = "REPLACE_WITH_REPOSITORY_ID"
