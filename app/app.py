@@ -7,7 +7,7 @@ import time
 from datetime import date
 from urllib.parse import quote_plus
 
-from flask import Flask, Response, abort, flash, redirect, render_template, request, url_for
+from flask import Flask, Response, abort, flash, redirect, render_template, request, session, url_for
 from sqlalchemy import CheckConstraint, Date, ForeignKey, Integer, String, Text, create_engine, func, select, update
 from sqlalchemy.dialects.mysql import insert as mysql_insert
 from sqlalchemy.exc import OperationalError
@@ -106,14 +106,34 @@ def initialize_database() -> None:
 
 
 def is_admin() -> bool:
-    auth = request.authorization
-    expected = os.getenv("ADMIN_PASSWORD", "")
-    return bool(auth and auth.username == "admin" and expected and hmac.compare_digest(auth.password or "", expected))
+    return session.get("organizer_authenticated") is True
 
 
 def require_admin() -> Response | None:
     if not is_admin():
-        return Response("Organizer sign-in required", 401, {"WWW-Authenticate": 'Basic realm="EventPass organizer"'})
+        return redirect(url_for("organizer_login"))
+
+
+@app.route("/organizer/login", methods=["GET", "POST"])
+def organizer_login():
+    if is_admin():
+        return redirect(url_for("organizer"))
+    if request.method == "POST":
+        username = request.form.get("username", "")
+        password = request.form.get("password", "")
+        expected = os.getenv("ADMIN_PASSWORD", "")
+        if username == "admin" and expected and hmac.compare_digest(password, expected):
+            session["organizer_authenticated"] = True
+            return redirect(url_for("organizer"))
+        flash("That username or password did not match. Please try again.", "error")
+    return render_template("organizer_login.html")
+
+
+@app.post("/organizer/logout")
+def organizer_logout():
+    session.pop("organizer_authenticated", None)
+    flash("You have signed out.", "success")
+    return redirect(url_for("home"))
 
 
 @app.get("/")

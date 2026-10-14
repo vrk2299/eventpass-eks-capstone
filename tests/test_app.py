@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import base64
 from datetime import date
 
 import pytest
@@ -38,9 +37,11 @@ def client(monkeypatch):
         yield test_client
 
 
-def admin_headers(password="test-organizer-password"):
-    token = base64.b64encode(f"admin:{password}".encode()).decode()
-    return {"Authorization": f"Basic {token}"}
+def organizer_login(client):
+    return client.post("/organizer/login", data={
+        "username": "admin",
+        "password": "test-organizer-password",
+    })
 
 
 def test_home_shows_seed_event(client):
@@ -99,12 +100,23 @@ def test_sold_out_event_does_not_create_booking(client):
 
 def test_organizer_requires_password(client):
     response = client.get("/organizer")
-    assert response.status_code == 401
-    assert "Basic" in response.headers["WWW-Authenticate"]
+    assert response.status_code == 302
+    assert response.headers["Location"].endswith("/organizer/login")
+
+
+def test_organizer_login_rejects_wrong_password(client):
+    response = client.post("/organizer/login", data={
+        "username": "admin",
+        "password": "wrong-password",
+    })
+
+    assert response.status_code == 200
+    assert b"did not match" in response.data
 
 
 def test_organizer_can_add_event(client):
-    response = client.post("/organizer", headers=admin_headers(), data={
+    organizer_login(client)
+    response = client.post("/organizer", data={
         "name": "New Event",
         "category": "Technology",
         "venue": "Studio Hall",
@@ -130,7 +142,8 @@ def test_organizer_dashboard_shows_booking_counts_and_attendees(client):
         "attendee_email": "jamie@example.com",
     })
 
-    response = client.get("/organizer", headers=admin_headers())
+    organizer_login(client)
+    response = client.get("/organizer")
 
     assert response.status_code == 200
     assert b"Total registrations" in response.data

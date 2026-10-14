@@ -1,0 +1,8 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Organizer sign-in | EventPass</title><link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}"></head>
+<body class="organizer-page"><header class="topbar"><a class="brand" href="/">✦ EventPass</a><nav><a href="/">Events</a></nav></header><main class="login-content">
+  <a class="back-link" href="/">← Back to events</a><span class="eyebrow">Event management</span><h1>Organizer sign-in</h1><p class="muted">Sign in to manage events and view attendee registrations.</p>
+  {% with messages = get_flashed_messages(with_categories=true) %}{% if messages %}<div class="flash {{ messages[0][0] }}">{{ messages[0][1] }}</div>{% endif %}{% endwith %}
+  <section class="panel"><form class="login-form" method="post" action="{{ url_for('organizer_login') }}"><label>Username<input name="username" autocomplete="username" required autofocus></label><label>Password<input name="password" type="password" autocomplete="current-password" required></label><button class="button">Sign in</button></form><p class="form-hint">Classroom demo account: username <code>admin</code>; use the organizer password configured during setup.</p></section>
+</main><footer>EventPass · Built for the AWS EKS DevOps capstone</footer></body></html>
