@@ -1,6 +1,6 @@
 param(
   [string]$Region = "ap-south-1",
-  [string]$ClusterName = "eventpass-class"
+  [string]$ClusterName = "eventpass"
 )
 $ErrorActionPreference = "Stop"
 aws eks update-kubeconfig --name $ClusterName --region $Region
