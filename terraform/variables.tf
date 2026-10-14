@@ -1,7 +1,7 @@
 variable "name" {
   description = "Short unique prefix for lab resource names. Keep under 20 characters."
   type        = string
-  default     = "eventpass-class"
+  default     = "eventpass"
 }
 variable "aws_region" {
   description = "AWS region for all resources."
