@@ -6,14 +6,14 @@ A teaching app for the capstone: deploy an online ticketing and event-management
 
 ## What students will see
 
-- An event catalogue, mock ticket reservations, and a password-protected organizer page.
+- An event catalogue, no-payment attendee registration, and a password-protected organizer dashboard with per-event totals and attendee details.
 - A container image built from a Git commit and stored in Amazon ECR.
 - A Kubernetes Deployment and Service in a dedicated `eventpass` namespace.
 - A temporary public HTTP URL served by an ALB created from Kubernetes Ingress.
-- A private MySQL database in RDS. The app does not accept payment or collect attendee personal information.
+- A private MySQL database in RDS. The app does not accept payment; it stores attendee names and email addresses for classroom demonstrations.
 - CI on pull requests and automatic deploys after a passing commit reaches `main`.
 
-The app is a classroom demonstration, not production ticketing software. Use a throwaway organizer password. The public ALB serves HTTP in this low-complexity lab, so do not enter real credentials or personal data.
+The app is a classroom demonstration, not production ticketing software. Use a throwaway organizer password and sample attendee data. The public ALB serves HTTP in this low-complexity lab, so do not enter real credentials or personal data.
 
 ## Architecture and staged lesson plan
 
@@ -36,7 +36,7 @@ Prerequisites: Docker Desktop with Compose.
    docker compose up --build
    ```
 
-3. Open `http://localhost:8080`; reserve a ticket and see the remaining count change. Open `/organizer` and sign in as `admin` using the `ADMIN_PASSWORD` in `.env`. `/healthz` checks MySQL.
+3. Open `http://localhost:8080`; enter a sample name and email to register without payment. Open `/organizer` and sign in as `admin` using the `ADMIN_PASSWORD` in `.env` to see registration totals and attendee details. `/healthz` checks MySQL.
 4. Stop with `Ctrl+C`. `docker compose down` preserves the local MySQL volume. For a disposable reset, run `docker compose down --volumes`.
 
 ## Prerequisites for AWS stages

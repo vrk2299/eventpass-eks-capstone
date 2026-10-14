@@ -53,7 +53,10 @@ def test_reservation_decrements_inventory_and_creates_confirmation(client):
     with SessionLocal() as db:
         event_id = db.scalar(select(Event.id).where(Event.slug == "test-concert"))
 
-    response = client.post(f"/events/{event_id}/reserve")
+    response = client.post(f"/events/{event_id}/reserve", data={
+        "attendee_name": "Alex Morgan",
+        "attendee_email": "alex@example.com",
+    })
 
     assert response.status_code == 302
     with SessionLocal() as db:
@@ -61,6 +64,23 @@ def test_reservation_decrements_inventory_and_creates_confirmation(client):
         booking = db.scalar(select(Booking).where(Booking.event_id == event_id))
         assert event.tickets_left == 1
         assert booking.confirmation_code.startswith("EP-")
+        assert booking.attendee.name == "Alex Morgan"
+        assert booking.attendee.email == "alex@example.com"
+
+
+def test_registration_requires_attendee_details(client):
+    with SessionLocal() as db:
+        event_id = db.scalar(select(Event.id).where(Event.slug == "test-concert"))
+
+    response = client.post(f"/events/{event_id}/reserve", data={
+        "attendee_name": "",
+        "attendee_email": "not-an-email",
+    })
+
+    assert response.status_code == 302
+    with SessionLocal() as db:
+        assert db.scalar(select(Booking.id).where(Booking.event_id == event_id)) is None
+        assert db.get(Event, event_id).tickets_left == 2
 
 
 def test_sold_out_event_does_not_create_booking(client):
@@ -100,6 +120,23 @@ def test_organizer_can_add_event(client):
         assert event is not None
         assert event.price_cents == 1950
         assert event.tickets_left == 50
+
+
+def test_organizer_dashboard_shows_booking_counts_and_attendees(client):
+    with SessionLocal() as db:
+        event_id = db.scalar(select(Event.id).where(Event.slug == "test-concert"))
+    client.post(f"/events/{event_id}/reserve", data={
+        "attendee_name": "Jamie Lee",
+        "attendee_email": "jamie@example.com",
+    })
+
+    response = client.get("/organizer", headers=admin_headers())
+
+    assert response.status_code == 200
+    assert b"Total registrations" in response.data
+    assert b"Jamie Lee" in response.data
+    assert b"jamie@example.com" in response.data
+    assert b"Test Concert" in response.data
 
 
 def test_health_endpoint_checks_database(client):

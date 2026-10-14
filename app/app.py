@@ -8,7 +8,7 @@ from datetime import date
 from urllib.parse import quote_plus
 
 from flask import Flask, Response, abort, flash, redirect, render_template, request, url_for
-from sqlalchemy import CheckConstraint, Date, ForeignKey, Integer, String, Text, create_engine, select, update
+from sqlalchemy import CheckConstraint, Date, ForeignKey, Integer, String, Text, create_engine, func, select, update
 from sqlalchemy.dialects.mysql import insert as mysql_insert
 from sqlalchemy.exc import OperationalError
 from sqlalchemy.orm import DeclarativeBase, Mapped, joinedload, mapped_column, relationship, sessionmaker
@@ -45,6 +45,17 @@ class Booking(Base):
     confirmation_code: Mapped[str] = mapped_column(String(24), unique=True, nullable=False)
     booked_at: Mapped[str] = mapped_column(String(32), nullable=False)
     event: Mapped[Event] = relationship(back_populates="bookings")
+    attendee: Mapped["BookingAttendee | None"] = relationship(back_populates="booking", uselist=False, cascade="all, delete-orphan")
+
+
+class BookingAttendee(Base):
+    """Attendee details live separately so existing classroom databases migrate safely."""
+    __tablename__ = "booking_attendees"
+
+    booking_id: Mapped[int] = mapped_column(ForeignKey("bookings.id", ondelete="CASCADE"), primary_key=True)
+    name: Mapped[str] = mapped_column(String(120), nullable=False)
+    email: Mapped[str] = mapped_column(String(254), nullable=False)
+    booking: Mapped[Booking] = relationship(back_populates="attendee")
 
 
 def database_url() -> str:
@@ -66,7 +77,20 @@ def initialize_database() -> None:
     """Create the classroom schema and seed demo events once, retrying MySQL startup."""
     for attempt in range(30):
         try:
-            Base.metadata.create_all(engine)
+            # Keep the pre-existing tables intact and add attendee details in a
+            # separate idempotent table so a rolling EKS update needs no data reset.
+            Base.metadata.create_all(engine, tables=[Event.__table__, Booking.__table__])
+            if engine.dialect.name == "mysql":
+                with engine.begin() as connection:
+                    connection.exec_driver_sql(
+                        "CREATE TABLE IF NOT EXISTS booking_attendees ("
+                        "booking_id INTEGER NOT NULL PRIMARY KEY, "
+                        "name VARCHAR(120) NOT NULL, email VARCHAR(254) NOT NULL, "
+                        "CONSTRAINT fk_booking_attendees_booking FOREIGN KEY (booking_id) "
+                        "REFERENCES bookings (id) ON DELETE CASCADE) ENGINE=InnoDB"
+                    )
+            else:
+                Base.metadata.create_all(engine, tables=[BookingAttendee.__table__])
             with SessionLocal.begin() as db:
                 if db.scalar(select(Event.id).limit(1)) is None:
                     db.execute(mysql_insert(Event.__table__).prefix_with("IGNORE"), [
@@ -101,6 +125,12 @@ def home():
 
 @app.post("/events/<int:event_id>/reserve")
 def reserve(event_id: int):
+    name = " ".join(request.form.get("attendee_name", "").split())
+    email = request.form.get("attendee_email", "").strip().lower()
+    if not name or len(name) > 120 or "@" not in email or len(email) > 254 or email.startswith("@") or email.endswith("@"):
+        flash("Enter your name and a valid email address to register.", "error")
+        return redirect(url_for("home"))
+
     code = "EP-" + secrets.token_hex(4).upper()
     with SessionLocal.begin() as db:
         result = db.execute(
@@ -111,8 +141,10 @@ def reserve(event_id: int):
         if result.rowcount != 1:
             flash("That event is sold out or no longer available.", "error")
             return redirect(url_for("home"))
-        db.add(Booking(event_id=event_id, confirmation_code=code, booked_at=time.strftime("%Y-%m-%d %H:%M:%S UTC", time.gmtime())))
-    flash(f"Ticket reserved. Confirmation: {code}. This demo does not collect payment.", "success")
+        booking = Booking(event_id=event_id, confirmation_code=code, booked_at=time.strftime("%Y-%m-%d %H:%M:%S UTC", time.gmtime()))
+        booking.attendee = BookingAttendee(name=name, email=email)
+        db.add(booking)
+    flash(f"You're registered! Confirmation: {code}. No payment was collected.", "success")
     return redirect(url_for("home"))
 
 
@@ -139,8 +171,11 @@ def organizer():
         flash("Event added.", "success")
         return redirect(url_for("organizer"))
     with SessionLocal() as db:
-        bookings = db.scalars(select(Booking).options(joinedload(Booking.event)).order_by(Booking.id.desc()).limit(30)).all()
-    return render_template("organizer.html", bookings=bookings)
+        events = db.scalars(select(Event).order_by(Event.event_date, Event.id)).all()
+        bookings = db.scalars(select(Booking).options(joinedload(Booking.event), joinedload(Booking.attendee)).order_by(Booking.id.desc()).limit(100)).all()
+        total_bookings = db.scalar(select(func.count(Booking.id))) or 0
+        booking_counts = dict(db.execute(select(Booking.event_id, func.count(Booking.id)).group_by(Booking.event_id)).all())
+    return render_template("organizer.html", bookings=bookings, events=events, booking_counts=booking_counts, total_bookings=total_bookings)
 
 
 @app.get("/healthz")

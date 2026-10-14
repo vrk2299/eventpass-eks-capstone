@@ -30,7 +30,7 @@ The EKS public API endpoint must be reachable by the GitHub-hosted deployment ru
 
 RDS generates and stores its master credential in AWS Secrets Manager. The deployment workflow reads it with its short-lived AWS role, masks the password in logs, and updates a Kubernetes Secret in the app namespace. The values are never committed in a manifest or GitHub variable. The Flask app connects to the database using that credential. Terraform state is local and contains infrastructure details; it must stay out of Git.
 
-The classroom app does not process payments or collect attendee contact information. The organizer page uses a separate password. A user booking changes inventory with one conditional database update, so concurrent requests cannot reduce inventory below zero. The ALB uses HTTP to keep the lab setup short; only use disposable credentials and sample data. Add an ACM certificate and HTTPS listener before using this design beyond class.
+The classroom app does not process payments. Each registration stores a sample attendee name and email in a separate `booking_attendees` table, and the password-protected organizer page shows total registrations, per-event counts, and attendee details. A user booking changes inventory with one conditional database update, so concurrent requests cannot reduce inventory below zero. The ALB uses HTTP to keep the lab setup short; only use disposable credentials and sample data. Add an ACM certificate and HTTPS listener before using this design beyond class.
 
 ## Why Terraform instead of `eksctl` for the main path
 

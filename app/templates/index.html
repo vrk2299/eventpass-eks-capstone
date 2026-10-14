@@ -12,10 +12,10 @@
     <div class="section-heading"><div><span class="eyebrow">What's on</span><h2>Upcoming events</h2></div><span class="count">{{ events|length }} experiences</span></div>
     <div class="event-grid">
       {% for event in events %}
-      <article class="event-card"><div class="event-image image-{{ loop.index }}"><span>{{ event.category }}</span></div><div class="event-body"><h3>{{ event.name }}</h3><p class="event-meta">{{ event.venue }} · {{ event.event_date.strftime('%a, %d %b %Y') }}</p><p class="description">{{ event.description }}</p><div class="event-footer"><div><strong>${{ '%.2f'|format(event.price_cents / 100) }}</strong><small>{{ event.tickets_left }} tickets left</small></div><form method="post" action="{{ url_for('reserve', event_id=event.id) }}"><button class="button" {% if event.tickets_left == 0 %}disabled{% endif %}>Reserve</button></form></div></div></article>
+      <article class="event-card"><div class="event-image image-{{ loop.index }}"><span>{{ event.category }}</span></div><div class="event-body"><h3>{{ event.name }}</h3><p class="event-meta">{{ event.venue }} · {{ event.event_date.strftime('%a, %d %b %Y') }}</p><p class="description">{{ event.description }}</p><div class="event-footer"><div><strong>Listed ${{ '%.2f'|format(event.price_cents / 100) }}</strong><small>{{ event.tickets_left }} places left · no payment</small></div></div><form class="registration-form" method="post" action="{{ url_for('reserve', event_id=event.id) }}"><label>Your name<input name="attendee_name" autocomplete="name" required maxlength="120" placeholder="Alex Morgan"></label><label>Email address<input name="attendee_email" type="email" autocomplete="email" required maxlength="254" placeholder="alex@example.com"></label><button class="button" {% if event.tickets_left == 0 %}disabled{% endif %}>Register</button></form></div></article>
       {% else %}<div class="empty">No events are available right now.</div>{% endfor %}
     </div>
-    <p class="demo-note">Classroom demo only · No payment is collected and no attendee details are stored.</p>
+    <p class="demo-note">Classroom demo only · Register with your name and email. No payment is collected.</p>
   </main>
   <footer>EventPass · Built for the AWS EKS DevOps capstone</footer>
 </body></html>
