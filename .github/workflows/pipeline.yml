@@ -85,11 +85,13 @@ jobs:
       - name: Sign in to Amazon ECR
         id: ecr
         uses: aws-actions/amazon-ecr-login@v2
-      - name: Build and push immutable commit image
+      - name: Build and push immutable run image
         id: image
         env:
           REGISTRY: ${{ steps.ecr.outputs.registry }}
-          IMAGE_TAG: ${{ github.sha }}
+          # A commit SHA alone collides when the same commit is run again
+          # against an immutable ECR repository. Include this run and attempt.
+          IMAGE_TAG: ${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
         run: |
           docker build --pull -t "$REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" .
           docker push "$REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
