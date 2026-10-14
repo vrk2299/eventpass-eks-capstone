@@ -49,7 +49,7 @@ Install and configure these tools on the instructor workstation:
 - Docker Desktop, Git, and a public GitHub repository.
 - GitHub Actions enabled for the repository.
 
-This repository defaults to `ap-south-1` (Mumbai), EKS Kubernetes `1.36`, one `t3.medium` node, and single-AZ `db.t3.micro` MySQL. RDS uses the regional default MySQL engine version unless you set an exact supported version in `terraform/terraform.tfvars`. Confirm the selected instance types, database engine version, and Kubernetes version are offered in your chosen region and account quotas before applying. The VPC uses two AZs but one NAT Gateway to reduce the lab footprint; this is not a highly available production topology.
+This repository defaults to `ap-south-1` (Mumbai), EKS Kubernetes `1.36`, one `t3.small` node, and single-AZ `db.t3.micro` MySQL. RDS uses the regional default MySQL engine version unless you set an exact supported version in `terraform/terraform.tfvars`. Confirm the selected instance types, database engine version, and Kubernetes version are offered in your chosen region and account quotas before applying. The VPC uses two AZs but one NAT Gateway to reduce the lab footprint; this is not a highly available production topology.
 
 ## Stage 2: configure the GitHub OIDC trust and create AWS resources
 
@@ -83,11 +83,18 @@ In the GitHub repository, open **Settings → Secrets and variables → Actions*
 | `ECR_REPOSITORY` | `eventpass` |
 | `DB_HOST` | `terraform output -raw rds_endpoint` |
 | `DB_NAME` | `terraform output -raw rds_database_name` |
-| `DB_SECRET_ARN` | `terraform output -raw rds_secret_arn` |
+| `DB_USER` | `terraform output -raw rds_master_username` |
 
-Create two **Actions secrets** named `ADMIN_PASSWORD` and `SECRET_KEY`. Use a unique, temporary organizer password and a long random Flask secret key. Do not put either value in Git, Terraform variables, ConfigMaps, or repository variables.
+The instructor host (EC2) retrieves the RDS master credential from AWS Secrets Manager and writes it directly into a Kubernetes Secret. The organizer password is entered without echoing to the EC2 terminal; the Flask signing key is generated there. Run this from the repository directory on EC2 after the setup script finishes:
 
-The pipeline tests every pull request. On a push to `main`, it assumes the Terraform-created AWS role through OIDC, builds an image tagged with the commit SHA, pushes it to ECR, creates the runtime ConfigMap and refreshes Kubernetes secrets from RDS Secrets Manager and GitHub Actions secrets, applies the Kustomize overlay, and waits for the Deployment rollout. Until all AWS repository variables are configured, the deploy job is skipped; after setup, use **Actions → EventPass CI and deploy → Run workflow** to deploy the current `main` commit. The AWS role is scoped to this repository's immutable GitHub IDs and the EKS deployer group is bound only in the `eventpass` namespace.
+```bash
+export KUBECONFIG=/tmp/eventpass-kubeconfig
+bash scripts/bootstrap-runtime-secrets.sh "$(cd terraform && terraform output -raw rds_secret_arn)"
+```
+
+These values stay on the instructor host and in Kubernetes. Do not add them to Git, Terraform variables, ConfigMaps, or GitHub Actions. If you destroy and recreate the cluster, run the bootstrap script again before deploying.
+
+The pipeline tests every pull request. On a push to `main`, it assumes the Terraform-created AWS role through OIDC, builds an image tagged with the commit SHA, pushes it to ECR, creates the runtime ConfigMap, applies the Kustomize overlay, and waits for the Deployment rollout. The Actions runner does not read the database password or app secrets. Bootstrap the runtime secrets first; if they are missing, Kubernetes cannot start the app pods and the rollout will fail. After setup, use **Actions → EventPass CI and deploy → Run workflow** to deploy the current `main` commit. The AWS role is scoped to this repository's immutable GitHub IDs and the EKS deployer group is bound only in the `eventpass` namespace.
 
 ## Stage 4: use and teach the deployment
 

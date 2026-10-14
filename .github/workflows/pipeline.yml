@@ -61,7 +61,7 @@ jobs:
       vars.ECR_REPOSITORY != '' &&
       vars.DB_HOST != '' &&
       vars.DB_NAME != '' &&
-      vars.DB_SECRET_ARN != ''
+      vars.DB_USER != ''
     needs: test
     runs-on: ubuntu-latest
     environment: classroom
@@ -74,7 +74,7 @@ jobs:
       ECR_REPOSITORY: ${{ vars.ECR_REPOSITORY }}
       DB_HOST: ${{ vars.DB_HOST }}
       DB_NAME: ${{ vars.DB_NAME }}
-      DB_SECRET_ARN: ${{ vars.DB_SECRET_ARN }}
+      DB_USER: ${{ vars.DB_USER }}
     steps:
       - uses: actions/checkout@v6
       - name: Configure short-lived AWS credentials
@@ -96,25 +96,13 @@ jobs:
           echo "uri=$REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" >> "$GITHUB_OUTPUT"
       - name: Configure namespace deployment access
         run: aws eks update-kubeconfig --name "$EKS_CLUSTER_NAME" --region "$AWS_REGION"
-      - name: Refresh runtime secrets from AWS
-        env:
-          ADMIN_PASSWORD: ${{ secrets.ADMIN_PASSWORD }}
-          SECRET_KEY: ${{ secrets.SECRET_KEY }}
+      - name: Configure database connection
         run: |
           set -euo pipefail
-          db_json="$(aws secretsmanager get-secret-value --secret-id "$DB_SECRET_ARN" --query SecretString --output text)"
-          db_user="$(python -c 'import json,sys; print(json.load(sys.stdin)["username"])' <<< "$db_json")"
-          db_password="$(python -c 'import json,sys; print(json.load(sys.stdin)["password"])' <<< "$db_json")"
-          echo "::add-mask::$db_password"
           kubectl create configmap eventpass-config -n eventpass \
             --from-literal=DB_HOST="$DB_HOST" --from-literal=DB_PORT=3306 \
-            --from-literal=DB_NAME="$DB_NAME" --from-literal=DB_USER="$db_user" \
+            --from-literal=DB_NAME="$DB_NAME" --from-literal=DB_USER="$DB_USER" \
             --dry-run=client -o yaml | kubectl apply --server-side --force-conflicts -f -
-          kubectl create secret generic eventpass-db -n eventpass \
-            --from-literal=password="$db_password" --dry-run=client -o yaml | kubectl apply --server-side --force-conflicts -f -
-          kubectl create secret generic eventpass-app -n eventpass \
-            --from-literal=admin-password="$ADMIN_PASSWORD" \
-            --from-literal=secret-key="$SECRET_KEY" --dry-run=client -o yaml | kubectl apply --server-side --force-conflicts -f -
       - name: Deploy and wait for the classroom app
         env:
           IMAGE_URI: ${{ steps.image.outputs.uri }}

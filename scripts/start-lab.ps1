@@ -13,7 +13,7 @@ try {
   $cluster = terraform output -raw cluster_name
   $region = terraform output -raw aws_region
   & (Join-Path $PSScriptRoot "bootstrap-alb-controller.ps1") -Region $region -ClusterName $cluster
-  Write-Host "Infrastructure and ingress controller are ready. Add the Terraform outputs and app secrets to GitHub Actions, then push to main to deploy."
+  Write-Host "Infrastructure and ingress controller are ready. Bootstrap runtime secrets on the instructor host, configure GitHub Actions variables, then push to main to deploy."
 } finally {
   Pop-Location
 }

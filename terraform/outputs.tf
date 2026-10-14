@@ -13,6 +13,9 @@ output "rds_endpoint" {
 output "rds_database_name" {
   value = aws_db_instance.this.db_name
 }
+output "rds_master_username" {
+  value = aws_db_instance.this.username
+}
 output "rds_secret_arn" {
   value     = aws_db_instance.this.master_user_secret[0].secret_arn
   sensitive = true

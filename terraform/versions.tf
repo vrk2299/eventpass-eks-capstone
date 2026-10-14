@@ -200,11 +200,6 @@ data "aws_iam_policy_document" "github_permissions" {
     actions = ["eks:DescribeCluster"]
     resources = [module.eks.cluster_arn]
   }
-  statement {
-    sid = "ReadDatabaseSecret"
-    actions = ["secretsmanager:GetSecretValue", "secretsmanager:DescribeSecret"]
-    resources = [aws_db_instance.this.master_user_secret[0].secret_arn]
-  }
 }
 
 resource "aws_iam_role_policy" "github_permissions" {
