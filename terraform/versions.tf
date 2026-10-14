@@ -60,7 +60,7 @@ module "eks" {
   endpoint_private_access = true
   enable_cluster_creator_admin_permissions = true
 
-  cluster_enabled_log_types              = ["api", "audit", "authenticator"]
+  enabled_log_types                      = ["api", "audit", "authenticator"]
   cloudwatch_log_group_retention_in_days = 7
 
   access_entries = {
