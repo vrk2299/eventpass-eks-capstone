@@ -66,7 +66,13 @@ module "eks" {
   addons = {
     coredns    = { most_recent = true }
     kube-proxy = { most_recent = true }
-    vpc-cni    = { most_recent = true }
+    # The worker nodes need the CNI to become Ready. Install it before
+    # creating compute so the managed node group does not time out waiting
+    # for networking that Terraform would otherwise install afterward.
+    vpc-cni = {
+      most_recent    = true
+      before_compute = true
+    }
   }
 
   access_entries = {
