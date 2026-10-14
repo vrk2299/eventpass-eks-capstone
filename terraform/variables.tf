@@ -21,7 +21,7 @@ variable "mysql_engine_version" {
 variable "node_instance_type" {
   description = "EC2 type for the single classroom node."
   type        = string
-  default     = "t3.medium"
+  default     = "t3.small"
 }
 variable "db_instance_class" {
   description = "RDS class for a small classroom workload."
