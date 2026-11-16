@@ -1,4 +1,9 @@
 terraform {
+  backend "s3" {
+    bucket = "vrktfremote"
+    key    = "capstonebackend/terraform.tfstate"
+    region = "ap-south-1"
+  }
   required_version = ">= 1.5.7"
   required_providers {
     aws = {
